@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mailbox Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>📬 IoT Mailbox Manager</h1>
+
+        <h2>📦 Active Devices</h2>
+        <ul id="device-list"></ul>
+
+        <h2>➕ Add Device</h2>
+        <input type="text" id="new-device-id" placeholder="Device's ID">
+        <button onclick="addDevice()">Add</button>
+
+        <h2>📤 Send Command</h2>
+        <input type="text" id="command-device-id" placeholder="Device's ID">
+        <input type="text" id="command-text" placeholder="Command">
+        <button onclick="sendCommand()">Send</button>
+    </div>
+
+    <script>
+        async function fetchDevices() {
+            const res = await fetch('/devices');
+            const data = await res.json();
+            const list = document.getElementById('device-list');
+            list.innerHTML = '';
+            for (const id in data) {
+                const li = document.createElement('li');
+                li.textContent = `🟢 ${id}: ${data[id].status} (${data[id].distance || 'N/A'} cm)`;
+                list.appendChild(li);
+            }
+        }
+
+        async function addDevice() {
+            const id = document.getElementById('new-device-id').value;
+            await fetch('/devices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: id })
+            });
+            fetchDevices();
+        }
+
+        async function sendCommand() {
+            const id = document.getElementById('command-device-id').value;
+            const command = document.getElementById('command-text').value;
+            await fetch(`/devices/${id}/command`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            });
+            alert('Comando sent!');
+        }
+
+        fetchDevices();
+        setInterval(fetchDevices, 5000);
+    </script>
+</body>
+
+</html>

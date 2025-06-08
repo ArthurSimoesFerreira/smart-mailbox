@@ -1,0 +1,5 @@
+MQTT_BROKER_URL = 'broker.emqx.io'
+MQTT_BROKER_PORT = 1883
+MQTT_USERNAME = 'user'
+MQTT_PASSWORD = 'password'
+MQTT_TLS_ENABLED = False
