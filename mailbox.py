@@ -2,6 +2,7 @@ import network, time
 from machine import Pin
 from umqtt.robust import MQTTClient
 import ssl
+import umail
 
 # Wi-Fi credentials
 WIFI_SSID = 'iphone'
@@ -23,8 +24,16 @@ TOPIC_STATUS = f"pico/{DEVICE_ID}/status".encode()
 trigger = Pin(14, Pin.OUT)
 echo = Pin(15, Pin.IN)
 
+# Mail Checking
 last_distance = None
-THRESHOLD = 3  # cm
+THRESHOLD = 1.5  # cm
+
+# Email details
+sender_email = 'asferreira1002@gmail.com'
+sender_name = 'IOT-Mailbox'
+sender_app_password = 'jgfl drsu zrlp awji'
+recipient_email = 'asferreira1002@gmail.com'
+email_subject = 'Your Mailbox'
 
 
 def connect_wifi():
@@ -36,6 +45,19 @@ def connect_wifi():
         while not wlan.isconnected():
             time.sleep(1)
     print("✅ Wi-Fi connected:", wlan.ifconfig())
+    
+
+def send_email(msg):
+    smtp = umail.SMTP('smtp.gmail.com', 465, ssl=True)
+    smtp.login(sender_email, sender_app_password)
+    smtp.to(recipient_email)
+    smtp.write("From: " + sender_name + "<" + sender_email + ">\n")
+    smtp.write("Subject: " + email_subject + "\n")
+    smtp.write(msg)
+    smtp.send()
+    smtp.quit()
+    print("Email sent!")
+
     
 def create_ssl_context():
     # Create an SSL context
@@ -117,6 +139,7 @@ def main():
             status_msg = check_mailbox(distance)
             if status_msg is not None:
                 client.publish(TOPIC_STATUS, status_msg)
+                send_email(status_msg)
         except OSError as e:
             print("MQTT error:", e)
             try:
