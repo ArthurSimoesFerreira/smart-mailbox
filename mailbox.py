@@ -1,6 +1,6 @@
 import network, time
 from machine import Pin
-from umqtt.simple import MQTTClient
+from umqtt.robust import MQTTClient
 import ssl
 
 # Wi-Fi credentials
@@ -16,10 +16,16 @@ CLIENT_ID = 'pico-w-client'
 DEVICE_ID = 'mailbox1'
 CA_CERTS_PATH = './ca.der'
 TOPIC_PUBLISH = f"pico/{DEVICE_ID}/distance".encode()
+TOPIC_STATUS = f"pico/{DEVICE_ID}/status".encode()
+
 
 # Pin setup
 trigger = Pin(14, Pin.OUT)
 echo = Pin(15, Pin.IN)
+
+last_distance = None
+THRESHOLD = 3  # cm
+
 
 def connect_wifi():
     wlan = network.WLAN(network.STA_IF)
@@ -61,6 +67,20 @@ def ultra():
     distance = (timepassed * 0.0343) / 2
     return round(distance, 2)
 
+
+def check_mailbox(current_distance):
+    global last_distance
+    status = None
+
+    if last_distance is not None:
+        diff = last_distance - current_distance
+        if diff >= THRESHOLD:
+            status = "Mail delivered!"
+            print(status)
+    last_distance = current_distance
+    return status
+
+
 def connect_mqtt():
     ssl_context =  create_ssl_context()
     
@@ -70,12 +90,14 @@ def connect_mqtt():
         port=MQTT_PORT,
         user=MQTT_USER,
         password=MQTT_PASSWORD,
-        ssl=ssl_context
+        ssl=ssl_context,
+        keepalive=10
     )
     client.set_last_will(TOPIC_PUBLISH, b"offline", retain=True)
     client.connect()
-    print("🔐 Connected to secure MQTT broker (TLS)")
+    print("Connected to secure MQTT broker (TLS)")
     return client
+
 
 def main():
     connect_wifi()
@@ -84,13 +106,27 @@ def main():
     while True:
         distance = ultra()
         if distance == -1:
-            print("⚠️ Sensor timeout or not connected")
+            print("Sensor timeout or not connected")
             msg = "error"
         else:
-            print("📦 Distance:", distance, "cm")
+            print("Distance:", distance, "cm")
             msg = str(distance)
 
-        client.publish(TOPIC_PUBLISH, msg)
+        try:
+            client.publish(TOPIC_PUBLISH, msg)
+            status_msg = check_mailbox(distance)
+            if status_msg is not None:
+                client.publish(TOPIC_STATUS, status_msg)
+        except OSError as e:
+            print("MQTT error:", e)
+            try:
+                client.disconnect()
+            except:
+                pass
+            client = connect_mqtt()
+
+
         time.sleep(5)
+
 
 main()
