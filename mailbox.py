@@ -35,6 +35,8 @@ sender_app_password = 'jgfl drsu zrlp awji'
 recipient_email = 'asferreira1002@gmail.com'
 email_subject = 'Your Mailbox'
 
+# Setup LED
+led = Pin("LED", Pin.OUT)
 
 def connect_wifi():
     wlan = network.WLAN(network.STA_IF)
@@ -99,6 +101,7 @@ def check_mailbox(current_distance):
         if diff >= THRESHOLD:
             status = "Mail delivered!"
             print(status)
+            led.on()
     last_distance = current_distance
     return status
 
