@@ -29,15 +29,15 @@ def get_single_device(device_id):
         return jsonify({"error": "Device not found"}), 404
     return jsonify(device)
 
-@app.route('/devices', methods=['POST'])
-def register_device():
-    data = request.get_json()
-    device_id = data.get("device_id")
-    if not device_id:
-        return jsonify({"error": "device_id is required"}), 400
-    if not devices.add_device(device_id):
-        return jsonify({"error": "Device already exists"}), 400
-    return jsonify({"message": f"Device {device_id} registered."}), 201
+#@app.route('/devices', methods=['POST'])
+#def register_device():
+#    data = request.get_json()
+#    device_id = data.get("device_id")
+#    if not device_id:
+#       return jsonify({"error": "device_id is required"}), 400
+#   if not devices.add_device(device_id):
+#       return jsonify({"error": "Device already exists"}), 400
+#    return jsonify({"message": f"Device {device_id} registered."}), 201
 
 @app.route('/devices/<device_id>', methods=['DELETE'])
 def delete_device(device_id):
@@ -46,14 +46,17 @@ def delete_device(device_id):
         return jsonify({"error": "Device not found"}), 404
     return jsonify({"message": f"Device {device_id} removed."})
 
+
 @app.route('/devices/<device_id>/command', methods=['POST'])
 def send_command(device_id):
     data = request.get_json()
     command = data.get("command")
-    if command is None:
-        return jsonify({"error": "command is required"}), 400
-    mqtt.publish(f"pico/{device_id}/command", command)
-    return jsonify({"message": f"Command sent to {device_id}"}), 200
+    if command != "yes":
+        return jsonify({"error": "Only 'yes' command is allowed."}), 400
+    print('yes')
+    mqtt.publish(f"pico/{device_id}/received", command)
+    return jsonify({"message": f"'yes' confirmation sent to {device_id}"}), 200
+
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):

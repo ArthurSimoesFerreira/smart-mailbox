@@ -13,15 +13,6 @@
 
         <h2>📦 Active Devices</h2>
         <ul id="device-list"></ul>
-
-        <h2>➕ Add Device</h2>
-        <input type="text" id="new-device-id" placeholder="Device's ID">
-        <button onclick="addDevice()">Add</button>
-
-        <h2>📤 Send Command</h2>
-        <input type="text" id="command-device-id" placeholder="Device's ID">
-        <input type="text" id="command-text" placeholder="Command">
-        <button onclick="sendCommand()">Send</button>
     </div>
 
     <script>
@@ -32,31 +23,31 @@
             list.innerHTML = '';
             for (const id in data) {
                 const li = document.createElement('li');
-                li.textContent = `🟢 ${id}: ${data[id].status} (${data[id].distance || 'N/A'} cm)`;
+                li.innerHTML = `
+                    🟢 <strong>${id}</strong>: ${data[id].status} (${data[id].distance || 'N/A'} cm)
+                    <button onclick="removeDevice('${id}')">❌ Remove</button>
+                    <button onclick="confirmReceived('${id}')">✅ Mail Received</button>
+                `;
                 list.appendChild(li);
             }
         }
 
-        async function addDevice() {
-            const id = document.getElementById('new-device-id').value;
-            await fetch('/devices', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device_id: id })
-            });
-            fetchDevices();
-        }
+        async function removeDevice(id) {
+                await fetch(`/devices/${id}`, {
+                    method: 'DELETE'
+                });
+                fetchDevices();
+            }
 
-        async function sendCommand() {
-            const id = document.getElementById('command-device-id').value;
-            const command = document.getElementById('command-text').value;
-            await fetch(`/devices/${id}/command`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command })
-            });
-            alert('Comando sent!');
-        }
+            async function confirmReceived(id) {
+                await fetch(`/devices/${id}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: "yes" })
+                });
+                alert('Confirmation sent!');
+            }
+
 
         fetchDevices();
         setInterval(fetchDevices, 5000);

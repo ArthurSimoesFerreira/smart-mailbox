@@ -18,7 +18,9 @@ DEVICE_ID = 'mailbox1'
 CA_CERTS_PATH = './ca.der'
 TOPIC_PUBLISH = f"pico/{DEVICE_ID}/distance".encode()
 TOPIC_STATUS = f"pico/{DEVICE_ID}/status".encode()
+TOPIC_RECEIVED = f"pico/{DEVICE_ID}/received".encode()
 
+client = None
 
 # Pin setup
 trigger = Pin(14, Pin.OUT)
@@ -106,7 +108,17 @@ def check_mailbox(current_distance):
     return status
 
 
+def on_message(topic, msg):
+    global client
+    print("Received:", topic, msg)
+    if topic.decode() == f"pico/{DEVICE_ID}/received" and msg.decode().strip().lower() == "yes":
+        print("✅ Mail marked as received. Turning off LED.")
+        led.off()
+        client.publish(TOPIC_STATUS, "None")
+
+
 def connect_mqtt():
+    global client
     ssl_context =  create_ssl_context()
     
     client = MQTTClient(
@@ -119,16 +131,20 @@ def connect_mqtt():
         keepalive=10
     )
     client.set_last_will(TOPIC_PUBLISH, b"offline", retain=True)
+    client.set_callback(on_message)
     client.connect()
+    client.subscribe(TOPIC_RECEIVED)
     print("Connected to secure MQTT broker (TLS)")
     return client
 
 
 def main():
+    global client
     connect_wifi()
     client = connect_mqtt()
 
     while True:
+        client.check_msg()
         distance = ultra()
         if distance == -1:
             print("Sensor timeout or not connected")
